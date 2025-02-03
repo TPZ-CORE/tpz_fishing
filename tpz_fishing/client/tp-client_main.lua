@@ -2,52 +2,53 @@
 
 local lastState = 0
 
-local ClientData = { 
-    IsPlayerFishing = false, 
-    IsReady = false, 
-    Status = nil,
-    FishStatus = 0,
+local PlayerData = { 
+    IsPlayerFishing     = false, 
+    CurrentUsedLure     = nil,
+    IsReady             = false, 
+    Status              = nil,
+    FishStatus          = 0,
     FishingLureCooldown = 0,
-    FishForce = 0.6,
-    HorizontalMove = 0,
-    NextAttTime = 0,
+    FishForce           = 0.6,
+    HorizontalMove      = 0,
+    NextAttTime         = 0,
+    
 }
 
 --[[-------------------------------------------------------
  Events
 ]]---------------------------------------------------------
 
-RegisterNetEvent("tpz_fishing:useSelectedFishingBait")
-AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
+RegisterNetEvent("tpz_fishing:client:useSelectedFishingBait")
+AddEventHandler("tpz_fishing:client:useSelectedFishingBait", function(selectedBait)
 
     Citizen.CreateThread(function()
 
         Citizen.InvokeNative(0x1096603B519C905F, "MMFSH")
 
-        ClientData.IsPlayerFishing = true
+        PlayerData.IsPlayerFishing = true
 
         local sleep                = true
-        local currentLure          = selectedBait
+        PlayerData.CurrentUsedLure = selectedBait
 
-        selectedBait = nil
-        ClientData.IsReady         = false
+        PlayerData.IsReady         = false
 
-        while ClientData.IsPlayerFishing do
+        while PlayerData.IsPlayerFishing do
 
             Citizen.Wait(0)
 
             GET_TASK_FISHING_DATA()
 
-            if FISHING_GET_MINIGAME_STATE() == 1 and not ClientData.IsReady then
+            if FISHING_GET_MINIGAME_STATE() == 1 and not PlayerData.IsReady then
 
-                ClientData.IsReady = true
+                PlayerData.IsReady = true
 
                 if Config.Debug then
-                    print("Current bait: " .. currentLure)
+                    print("Current bait: " .. PlayerData.CurrentUsedLure)
                 end
                 
-                TaskSwapFishingBait(PlayerPedId(), currentLure, 0)
-                Citizen.InvokeNative(0x9B0C7FA063E67629, PlayerPedId(), currentLure, 0, 1)
+                TaskSwapFishingBait(PlayerPedId(), PlayerData.CurrentUsedLure, 0)
+                Citizen.InvokeNative(0x9B0C7FA063E67629, PlayerPedId(), PlayerData.CurrentUsedLure, 0, 1)
             end
 
             if HasMinigameOn then
@@ -100,7 +101,7 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                             Citizen.InvokeNative(joaat("DRAW_LINE") & 0xFFFFFFFF, fishPosition, fishPosition + vec3(0, 0, 2.0), 255, 255, 0, 255)
                         end
 
-                        if ClientData.FishingLureCooldown <= GetGameTimer() then
+                        if PlayerData.FishingLureCooldown <= GetGameTimer() then
 
                             local dist = #(hookPosition - fishPosition)
                             if dist <= 1.6 then
@@ -118,7 +119,7 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                     end
 
                     if lured then
-                        ClientData.FishingLureCooldown = GetGameTimer() + (1 * 1000)
+                        PlayerData.FishingLureCooldown = GetGameTimer() + (1 * 1000)
                     end
 
                     if fishHandle then
@@ -140,7 +141,7 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                                 Citizen.InvokeNative(0x1A52076D26E09004, playerPed, fishHandle)
 
                                 FISHING_SET_FISH_HANDLE(fishHandle)
-                                ClientData.FishForce = 0.6
+                                PlayerData.FishForce = 0.6
 
                                 FISHING_SET_TRANSITION_FLAG(4)
                             end
@@ -158,22 +159,22 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                     local fishHandle = FISHING_GET_FISH_HANDLE()
 
                     if GetControlNormal(0, 0x390948DC) > 0 then
-                        ClientData.HorizontalMove = ClientData.HorizontalMove - (0.05 * GetControlNormal(0, 0x390948DC))
+                        PlayerData.HorizontalMove = PlayerData.HorizontalMove - (0.05 * GetControlNormal(0, 0x390948DC))
                     end
 
                     if GetControlNormal(0, 0x390948DC) < 0 then
-                        ClientData.HorizontalMove = ClientData.HorizontalMove + (0.05 * - GetControlNormal(0, 0x390948DC))
+                        PlayerData.HorizontalMove = PlayerData.HorizontalMove + (0.05 * - GetControlNormal(0, 0x390948DC))
                     end
 
-                    if ClientData.HorizontalMove < 0 then
-                        ClientData.HorizontalMove = 0
+                    if PlayerData.HorizontalMove < 0 then
+                        PlayerData.HorizontalMove = 0
                     end
 
-                    if ClientData.HorizontalMove > 1 then
-                        ClientData.HorizontalMove = 1
+                    if PlayerData.HorizontalMove > 1 then
+                        PlayerData.HorizontalMove = 1
                     end
 
-                    FISHING_SET_F_(22, ClientData.HorizontalMove)
+                    FISHING_SET_F_(22, PlayerData.HorizontalMove)
 
 
                     if FISHING_GET_LINE_DISTANCE() < 4.0 then
@@ -183,16 +184,16 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                         FISHING_SET_F_(14, 1.0)
                     end
 
-                    if GetGameTimer() >= ClientData.NextAttTime then
+                    if GetGameTimer() >= PlayerData.NextAttTime then
 
                         local tempoPuxando
                         local probabilidadePuxar = math.random()
 
                         if probabilidadePuxar > 0.8 or probabilidadePuxar < 0.2 then
-                            ClientData.FishForce = 0.8
+                            PlayerData.FishForce = 0.8
                             tempoPuxando = math.random(3, 5) * 1000
-                            ClientData.FishStatus = 1 -- agitado
-                            ClientData.NextAttTime = GetGameTimer() + tempoPuxando
+                            PlayerData.FishStatus = 1 -- agitado
+                            PlayerData.NextAttTime = GetGameTimer() + tempoPuxando
 
                             local _fishHandle = FISHING_GET_FISH_HANDLE()
                             local x, y, z = table.unpack(GetEntityCoords(_fishHandle))
@@ -213,30 +214,30 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                             SetParticleFxLoopedAlpha(Fisheffect, 1.0)
 
                         else
-                            ClientData.FishForce = 0
+                            PlayerData.FishForce = 0
                             tempoPuxando = math.random(6, 10) * 1000
-                            ClientData.FishStatus = 0 --calmo
-                            ClientData.NextAttTime = GetGameTimer() + tempoPuxando
+                            PlayerData.FishStatus = 0 --calmo
+                            PlayerData.NextAttTime = GetGameTimer() + tempoPuxando
                         end
                     end
 
-                    if ClientData.FishStatus == 1 then
+                    if PlayerData.FishStatus == 1 then
                         if IsControlPressed(0, joaat("INPUT_GAME_MENU_OPTION")) then
                             FISHING_SET_ROD_WEIGHT(4)
-                            ClientData.FishForce = ClientData.FishForce + 0.005
+                            PlayerData.FishForce = PlayerData.FishForce + 0.005
                         else
-                            ClientData.FishForce = ClientData.FishForce - 0.005
+                            PlayerData.FishForce = PlayerData.FishForce - 0.005
                         end
 
                         if IsControlJustReleased(0, joaat("INPUT_GAME_MENU_OPTION")) then
                             FISHING_SET_ROD_WEIGHT(2)
                         end
 
-                        if ClientData.FishForce >= 1.4 then
+                        if PlayerData.FishForce >= 1.4 then
                             FISHING_SET_F_(6, 11)
                         else
-                            if ClientData.FishForce < 0.8 then
-                                ClientData.FishForce = 0.8
+                            if PlayerData.FishForce < 0.8 then
+                                PlayerData.FishForce = 0.8
                             end
                         end
                         TaskSmartFleeCoord(fishHandle, GetEntityCoords(playerPed), 40.0, 50, 8, 1077936128)
@@ -266,8 +267,8 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                     end
 
                     if FISHING_GET_F_(6) ~= 11 and FISHING_GET_F_(6) ~= 12 then
-                        FISHING_SET_F_(13, ClientData.FishForce)
-                        FISHING_SET_F_(21, ClientData.FishForce)
+                        FISHING_SET_F_(13, PlayerData.FishForce)
+                        FISHING_SET_F_(21, PlayerData.FishForce)
                     end
 
                     if IsControlJustPressed(0, joaat("INPUT_ATTACK")) then
@@ -281,19 +282,15 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
 
                 if FISHING_GET_MINIGAME_STATE() == 12 then
                     if IsControlJustPressed(0, joaat("INPUT_ATTACK")) then
-                        if ClientData.IsPlayerFishing then
+                        if PlayerData.IsPlayerFishing then
                             FISHING_SET_TRANSITION_FLAG(32)
-                            ClientData.IsPlayerFishing = false
+                            PlayerData.IsPlayerFishing = false
 
-                            ClientData.Status = "keep"
+                            PlayerData.Status = "keep"
 
                             local entity = FISHING_GET_FISH_HANDLE()
                             local fishModel = GetEntityModel(entity)
-                            TriggerServerEvent("tpz_fishing:addFishItemToPlayerInventory", fishModel)
-
-                            if Config.DiscordWebhooking.Enabled then
-                                TriggerServerEvent("tpz_fishing:sendToDiscord", fishModel, FishData.Weight, ClientData.Status)
-                            end
+                            TriggerServerEvent("tpz_fishing:server:addFishItemToPlayerInventory", fishModel, PlayerData.CurrentUsedLure)
 
                             SetEntityAsMissionEntity(entity, true, true)
                             Citizen.Wait(3000)
@@ -303,19 +300,15 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                     end
 
                     if IsControlJustPressed(0, joaat("INPUT_AIM")) then
-                        if ClientData.IsPlayerFishing then
-                            ClientData.IsPlayerFishing = false
+                        if PlayerData.IsPlayerFishing then
+                            PlayerData.IsPlayerFishing = false
 
-                            ClientData.Status = "throw"
+                            PlayerData.Status = "throw"
 
                             local entity = FISHING_GET_FISH_HANDLE()
                             local fishModel = GetEntityModel(entity)
                             Citizen.InvokeNative(0x9B0C7FA063E67629, PlayerPedId(), "", 0, 1)
                             FISHING_SET_TRANSITION_FLAG(64)
-
-                            if Config.DiscordIntegration == true then
-                                TriggerServerEvent("tpz_fishing:discord", fishModel, FishData.Weight, ClientData.Status)
-                            end
 
                             SetEntityAsMissionEntity(entity, true, true)
                             Citizen.Wait(3000)
@@ -324,7 +317,7 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                     end
 
                     if FISHING_GET_F_(5) == 96 and FISHING_GET_F_(6) == 0 then
-                        ClientData.IsPlayerFishing = false
+                        PlayerData.IsPlayerFishing = false
                         Citizen.InvokeNative(0x9B0C7FA063E67629, PlayerPedId(), "", 0, 1)
                         local entity = FISHING_GET_FISH_HANDLE()
                         SetEntityAsMissionEntity(entity, true, true)
@@ -334,7 +327,7 @@ AddEventHandler("tpz_fishing:useSelectedFishingBait", function(selectedBait)
                 end
 
                 if IsControlJustPressed(0, joaat("INPUT_TOGGLE_HOLSTER")) then
-                    ClientData.IsPlayerFishing = false
+                    PlayerData.IsPlayerFishing = false
                     FISHING_SET_TRANSITION_FLAG(8)
                     Citizen.InvokeNative(0x9B0C7FA063E67629, PlayerPedId(), "", 0, 1)
                 end
