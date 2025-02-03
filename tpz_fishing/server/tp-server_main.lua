@@ -1,9 +1,11 @@
 
-local TPZ    = {}
+local TPZ = {}
 
 TriggerEvent("getTPZCore", function(cb) TPZ = cb end)
 
-local TPZInv      = exports.tpz_inventory:getInventoryAPI()
+local TPZInv = exports.tpz_inventory:getInventoryAPI()
+
+local PlayerBaits = {}
 
 -----------------------------------------------------------
 --[[ Local Functions ]]--
@@ -19,8 +21,8 @@ local GetFishModelDataParameters = function (fishModel)
         if model == fishModel then
 
             -- Adding an extra data parameter with the fish item name.
-            data[4] = tostring(_)
-            data[4] = string.lower(data[4])
+            data[5] = tostring(_)
+            data[5] = string.lower(data[5])
             
             return data
         end
@@ -31,47 +33,119 @@ local GetFishModelDataParameters = function (fishModel)
 
 end
 
+local function GetPlayerData(source)
+	local _source     = source
+    local xPlayer     = TPZ.GetPlayer(_source)
+
+	return {
+        steamName      = GetPlayerName(_source),
+        username       = xPlayer.getFirstName() .. ' ' .. xPlayer.getLastName(),
+		identifier     = xPlayer.getIdentifier(),
+        charIdentifier = xPlayer.getCharacterIdentifier(),
+	}
+
+end
+
+-----------------------------------------------------------
+--[[ Base Events  ]]--
+-----------------------------------------------------------
+ 
+AddEventHandler('onResourceStop', function(resourceName)
+    if (GetCurrentResourceName() ~= resourceName) then
+        return
+    end
+      
+    PlayerBaits = nil -- clearing all data
+end)
+
+
 -----------------------------------------------------------
 --[[ Events ]]--
 -----------------------------------------------------------
 
-RegisterServerEvent('tpz_fishing:addFishItemToPlayerInventory')
-AddEventHandler("tpz_fishing:addFishItemToPlayerInventory", function(fishModel)
-    local _source = source
-
+-- DO NOT USE THIS EVENT FOR OTHER REASONS THAN FISHING SCRIPT, IT IS USING DEVTOOL / INJECTIONS PROTECTION.
+RegisterServerEvent('tpz_fishing:server:addFishItemToPlayerInventory')
+AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fishModel, usedBait, itemId)
+    local _source         = source 
     local catchedFishData = GetFishModelDataParameters(fishModel)
+
     if catchedFishData == nil then
         return
     end
 
-    local name, texture, fish = catchedFishData[1], catchedFishData[2], catchedFishData[4]
-    
-    TPZInv.addItem(_source, fish, 1)
+    local PlayerData = GetPlayerData(_source)
 
-    TriggerClientEvent('tpz_core:sendAdvancedRightNotification', _source, string.format(Locales['FISH_CATCHED'], name), "inventory_items", texture, "COLOR_PURE_WHITE", 4000)
+    if (PlayerBaits[_source] == nil) or (PlayerBaits[_source] ~= usedBait) or (usedBait == nil) then
+
+        if Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Enabled then
+            local _w, _c      = Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
+            local description = 'The specified user attempted to use devtools / injection or netbug cheat on fish reward.'
+            TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
+        end
+    
+        ListedPlayers[_source] = nil
+        xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
+
+        return
+    end
+
+    local name, texture, experience, fishRewardItem = catchedFishData[1], catchedFishData[2], catchedFishData[4], catchedFishData[5]
+
+    local canCarryItem  = TPZInv.canCarryItem(_source, fishRewardItem, 1)
+
+    Wait(500)
+
+    if canCarryItem then
+
+        TPZInv.addItem(_source, fishRewardItem, 1)
+
+        local webhookData = Config.DiscordWebhooking['FISH_RECEIVED']
+
+        if webhookData.Enabled then
+            local title = "🐟`Found a fish`"
+            local message = string.format("**Steam Name: **`%s - (%s)`**\nIdentifier: **`%s (Char: %s)`\n\n**Fish Name:**`%s`", PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, name)
+            
+            API.sendToDiscord(webhookData.Url, title, message, webhookData.Color)
+        end
+
+        TriggerClientEvent('tpz_core:sendAdvancedRightNotification', _source, string.format(Locales['FISH_CATCHED'], name), "inventory_items", texture, "COLOR_PURE_WHITE", 4000)
+
+    else
+        TriggerClientEvent('tpz_core:sendAdvancedRightNotification', _source, string.format(Locales['FISH_LOST'], name), "inventory_items", texture, "COLOR_PURE_WHITE", 4000)
+    end
+
+    -- We add leveling experience even if the player does not get the item if its lost.
+    if Config.tpz_leveling then
+
+        local LevelingAPI = exports.tpz_leveling:getAPI()
+        LevelingAPI.AddPlayerLevelExperience(_source, 'fishing', experience)
+    end
+
+    PlayerBaits[_source] = nil
+
 end)
 
--- The following event is triggered by client and sends a webhook when the player catches a fish.
-RegisterServerEvent('tpz_fishing:sendToDiscord')
-AddEventHandler("tpz_fishing:sendToDiscord", function(fishModel, weight, status)
-    local _source         = source
+-----------------------------------------------------------
+--[[ Items Registration  ]]--
+-----------------------------------------------------------
 
-    local xPlayer         = TPZ.GetPlayer(_source)
-	local charidentifier  = xPlayer.getCharacterIdentifier()
-    local steamName       = GetPlayerName(_source)
+Citizen.CreateThread(function()
+    Citizen.Wait(2000)
 
-    local catchedFishData = GetFishModelDataParameters(fishModel)
+    for index, item in pairs(Config.Baits) do
 
-    if catchedFishData == nil then
-        return
+		TPZInv.registerUsableItem(item, GetCurrentResourceName(), function(data)
+            local _source = data.source
+
+            TPZInv.removeItem(_source, item, 1)
+            TriggerClientEvent("tpz_fishing:useSelectedFishingBait", data.source, item)
+
+            PlayerBaits[_source] = item
+
+			TPZInv.closeInventory(_source)
+
+        end)
+        
     end
 
-    local fishName        = catchedFishData[1]
-    local fishWeight      = string.format("%.2f%%", (weight * 54.25))
-
-    local title   = "🎣` Fishing`"
-    local message = "The following fish has been found: **`( Name: " .. fishName .. ", Weight: " .. fishWeight .. ")`** by the player: \n\n`" .. steamName .. " (Char Id : " .. charidentifier .. ")`"
-
-    local webhookData = Config.DiscordWebhooking
-    TriggerEvent("tpz_core:sendToDiscord", webhookData.Url, title, message, webhookData.Color)
 end)
