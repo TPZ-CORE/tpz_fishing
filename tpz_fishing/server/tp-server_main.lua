@@ -61,7 +61,7 @@ end)
 
 -- DO NOT USE THIS EVENT FOR OTHER REASONS THAN FISHING SCRIPT, IT IS USING DEVTOOL / INJECTIONS PROTECTION.
 RegisterServerEvent('tpz_fishing:server:addFishItemToPlayerInventory')
-AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fishModel, usedBait, itemId)
+AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fishModel, usedBait, weaponId)
     local _source         = source 
     local catchedFishData = GetFishModelDataParameters(fishModel)
 
@@ -85,6 +85,12 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
         return
     end
 
+    -- Removing durability if enabled on action.
+	if Config.Durability.Enabled and weaponId then
+		local randomValueRemove = math.random(Config.Durability.RemoveValue.min, Config.Durability.RemoveValue.max)
+        xPlayer.removeWeaponDurability('WEAPON_FISHINGROD', randomValueRemove, weaponId)
+	end
+
     local name, texture, experience, fishRewardItem = catchedFishData[1], catchedFishData[2], catchedFishData[4], catchedFishData[5]
 
     local canCarryItem  = TPZInv.canCarryItem(_source, fishRewardItem, 1)
@@ -95,7 +101,7 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
 
         TPZInv.addItem(_source, fishRewardItem, 1)
 
-        local webhookData = Config.DiscordWebhooking['FISH_RECEIVED']
+        local webhookData = Config.Webhooks['FISH_RECEIVED']
 
         if webhookData.Enabled then
             local title = "🐟`Found a fish`"
