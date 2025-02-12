@@ -12,6 +12,31 @@ Config.tpz_leveling = true
 Config.Difficulty   = 1250
 Config.ReelSpeed    = 0.0125
 
+-- Set to false if you don't want the fishing rod durability to be removed.
+Config.Durability = { Enabled = true, RemoveValue = { min = 1, max = 3 } }
+
+---------------------------------------------------------------
+--[[ Webhooks ]]--
+---------------------------------------------------------------
+
+Config.Webhooks = {
+    
+    ['DEVTOOLS_INJECTION_CHEAT'] = { -- Warnings and Logs about players who used or atleast tried to use devtools injection.
+        Enabled = false, 
+        Url = "", 
+        Color = 10038562,
+    },
+
+        
+    ['FISH_RECEIVED'] = {
+        Enabled = false, 
+        Url = "", 
+        Color = 10038562,
+    },
+
+}
+
+
 ---------------------------------------------------------------
 --[[ Baits ]]--
 ---------------------------------------------------------------
@@ -317,27 +342,6 @@ Config.FishData = {
 	A_C_FISHSALMONSOCKEYE_01_MS  = { "Salmon Sockeye (Medium)", "PROVISION_FISH_SOCKEYE_SALMON", "PROVISION_SCKEYESAL_DESC", 100 },
 	A_C_FISHSMALLMOUTHBASS_01_LG = { "Small Mouth Bass (Large)", "PROVISION_FISH_SMALLMOUTH_BASS", "PROVISION_SMLMTHBASS_DESC", 100 },
 	A_C_FISHSMALLMOUTHBASS_01_MS = { "Small Mouth Bass (Medium)", "PROVISION_FISH_SMALLMOUTH_BASS", "PROVISION_SMLMTHBASS_DESC", 100 },
-}
-
----------------------------------------------------------------
---[[ Webhooks ]]--
----------------------------------------------------------------
-
-Config.Webhooks = {
-    
-    ['DEVTOOLS_INJECTION_CHEAT'] = { -- Warnings and Logs about players who used or atleast tried to use devtools injection.
-        Enabled = false, 
-        Url = "", 
-        Color = 10038562,
-    },
-
-        
-    ['FISH_RECEIVED'] = {
-        Enabled = false, 
-        Url = "", 
-        Color = 10038562,
-    },
-
 }
 
 -----------------------------------------------------------
