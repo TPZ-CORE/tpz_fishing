@@ -290,7 +290,9 @@ AddEventHandler("tpz_fishing:client:useSelectedFishingBait", function(selectedBa
 
                             local entity = FISHING_GET_FISH_HANDLE()
                             local fishModel = GetEntityModel(entity)
-                            TriggerServerEvent("tpz_fishing:server:addFishItemToPlayerInventory", fishModel, PlayerData.CurrentUsedLure)
+                            local currentWeaponId = exports.tpz_inventory:getInventoryAPI().getUsedWeaponData().weaponId
+
+                            TriggerServerEvent("tpz_fishing:server:addFishItemToPlayerInventory", fishModel, PlayerData.CurrentUsedLure, currentWeaponId)
 
                             SetEntityAsMissionEntity(entity, true, true)
                             Citizen.Wait(3000)
