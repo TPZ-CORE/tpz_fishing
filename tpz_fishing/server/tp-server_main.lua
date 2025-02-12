@@ -63,6 +63,7 @@ end)
 RegisterServerEvent('tpz_fishing:server:addFishItemToPlayerInventory')
 AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fishModel, usedBait, weaponId)
     local _source         = source 
+    local xPlayer         = TPZ.GetPlayer(_source)
     local catchedFishData = GetFishModelDataParameters(fishModel)
 
     if catchedFishData == nil then
