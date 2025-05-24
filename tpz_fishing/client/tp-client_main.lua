@@ -290,7 +290,7 @@ AddEventHandler("tpz_fishing:client:useSelectedFishingBait", function(selectedBa
 
                             local entity = FISHING_GET_FISH_HANDLE()
                             local fishModel = GetEntityModel(entity)
-                            local currentWeaponId = exports.tpz_inventory:getInventoryAPI().getUsedWeaponData().weaponId
+                            local currentWeaponId = exports.tpz_weapons:getWeaponsAPI().getUsedWeaponData().weaponId
 
                             TriggerServerEvent("tpz_fishing:server:addFishItemToPlayerInventory", fishModel, PlayerData.CurrentUsedLure, currentWeaponId)
 
