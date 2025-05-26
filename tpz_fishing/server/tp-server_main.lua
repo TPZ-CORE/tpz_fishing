@@ -81,8 +81,8 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
         end
     
         ListedPlayers[_source] = nil
-        xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
-
+        --xPlayer.disconnect(Locales['DEVTOOLS_INJECTION_DETECTED'])
+        xPlayer.ban(Locales['DEVTOOLS_INJECTION_DETECTED'], -1)
         return
     end
 
