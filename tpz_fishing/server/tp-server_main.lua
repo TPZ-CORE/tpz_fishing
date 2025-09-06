@@ -108,7 +108,7 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
             local title = "🐟`Found a fish`"
             local message = string.format("**Steam Name: **`%s - (%s)`**\nIdentifier: **`%s (Char: %s)`\n\n**Fish Name:**`%s`", PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, name)
             
-            API.sendToDiscord(webhookData.Url, title, message, webhookData.Color)
+            TPZ.SendToDiscord(webhookData.Url, title, message, webhookData.Color)
         end
 
         TriggerClientEvent('tpz_core:sendAdvancedRightNotification', _source, string.format(Locales['FISH_CATCHED'], name), "inventory_items", texture, "COLOR_PURE_WHITE", 4000)
