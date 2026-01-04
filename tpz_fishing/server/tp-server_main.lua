@@ -75,7 +75,7 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
     if (PlayerBaits[_source] == nil) or (PlayerBaits[_source] ~= usedBait) or (usedBait == nil) then
 
         if Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Enabled then
-            local _w, _c      = Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Url, Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
+            local _w, _c      = TPZ.GetWebhookUrl("tpz_fishing", "DEVTOOLS_INJECTION_CHEAT"), Config.Webhooks['DEVTOOLS_INJECTION_CHEAT'].Color
             local description = 'The specified user attempted to use devtools / injection or netbug cheat on fish reward.'
             TPZ.SendToDiscordWithPlayerParameters(_w, Locales['DEVTOOLS_INJECTION_DETECTED_TITLE_LOG'], _source, PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, description, _c)
         end
@@ -107,8 +107,8 @@ AddEventHandler("tpz_fishing:server:addFishItemToPlayerInventory", function(fish
         if webhookData.Enabled then
             local title = "🐟`Found a fish`"
             local message = string.format("**Steam Name: **`%s - (%s)`**\nIdentifier: **`%s (Char: %s)`\n\n**Fish Name:**`%s`", PlayerData.steamName, PlayerData.username, PlayerData.identifier, PlayerData.charIdentifier, name)
-            
-            TPZ.SendToDiscord(webhookData.Url, title, message, webhookData.Color)
+            local url = TPZ.GetWebhookUrl("tpz_fishing", "FISH_RECEIVED")
+            TPZ.SendToDiscord(url, title, message, webhookData.Color)
         end
 
         TriggerClientEvent('tpz_core:sendAdvancedRightNotification', _source, string.format(Locales['FISH_CATCHED'], name), "inventory_items", texture, "COLOR_PURE_WHITE", 4000)
