@@ -15,6 +15,33 @@ local PlayerData = {
     
 }
 
+local FISHING_ENTITIES_LIST = {} -- 1.0.1
+
+--[[-------------------------------------------------------
+ Local Functions
+]]---------------------------------------------------------
+
+local RemoveCarriedFishEntityProperly = function(holding) -- 1.0.1
+    NetworkRequestControlOfEntity(holding)
+    SetEntityAsMissionEntity(holding, true, true)
+
+    Wait(100)
+
+    DeleteEntity(holding)
+
+    Wait(500)
+
+    local entitycheck = GetFirstEntityPedIsCarrying(PlayerPedId())
+    local holdingcheck = GetPedType(entitycheck)
+
+    if holdingcheck == 0 then
+        return true
+    end
+
+    return false
+end
+
+
 --[[-------------------------------------------------------
  Events
 ]]---------------------------------------------------------
@@ -109,6 +136,7 @@ AddEventHandler("tpz_fishing:client:useSelectedFishingBait", function(selectedBa
                             else
                                 if IsFishInterested(GetEntityModel(f)) then
                                     TaskGoToEntity(f, bobberPosition, 100, 1, 1.0, 2.0, 0)
+                                    FISHING_ENTITIES_LIST[f] = true
                                 end
                             end
 
@@ -378,5 +406,207 @@ Citizen.CreateThread(function()
     end
 end)
 
+--[[-------------------------------------------------------
+ Pickup Fix Bug / Glitch Protection
+]]---------------------------------------------------------
 
+
+Citizen.CreateThread(function()
+
+
+    local whitelistedWeapons = {
+        -- Melee
+        {Name = 'WEAPON_MELEE_CLEAVER'},
+        {Name = 'WEAPON_MELEE_HAMMER'},
+        {Name = 'WEAPON_MELEE_HATCHET'},
+        {Name = 'WEAPON_MELEE_HATCHET_HUNTER'},
+        
+        {Name = 'WEAPON_MELEE_KNIFE'},
+        {Name = 'WEAPON_MELEE_KNIFE_HORROR'},
+        {Name = 'WEAPON_MELEE_KNIFE_JAWBONE'},
+        {Name = 'WEAPON_MELEE_KNIFE_RUSTIC'},
+        {Name = 'WEAPON_MELEE_KNIFE_TRADER'},
+        
+        {Name = 'WEAPON_MELEE_MACHETE'},
+        {Name = 'WEAPON_MELEE_MACHETE_COLLECTOR'},
+        {Name = 'WEAPON_MELEE_MACHETE_HORROR'},
+   
+        -- Bows
+        {Name = 'WEAPON_BOW'},
+        {Name = 'WEAPON_BOW_IMPROVED'},
+    }
+
+    local RegisteredWhitelistedWeapons = {}
+
+    for _, v in ipairs(whitelistedWeapons) do
+      local hash = joaat(v.Name)
+      RegisteredWhitelistedWeapons[hash] = true
+    end
+
+    while true do
+
+        local sleep = 1000
+        local _, currentWeapon = GetCurrentPedWeapon(PlayerPedId())
+
+        if RegisteredWhitelistedWeapons[currentWeapon] == nil then 
+            goto END
+        end
+
+        if RegisteredWhitelistedWeapons[currentWeapon] then
+            sleep = 0
+
+            local size = GetNumberOfEvents(0)
+  
+            if size > 0 then
+      
+                for index = 0, size - 1 do
+                    local event = GetEventAtIndex(0, index)
+    
+                    if event == joaat("EVENT_ENTITY_DAMAGED") then
+    
+                        local eventDataSize = 9  -- for EVENT_NETWORK_DAMAGE_ENTITY data size is 32
+    
+                        local eventDataStruct = DataView.ArrayBuffer(eventDataSize * 8) 
+                        for i=0,eventDataSize-1 do
+                          eventDataStruct:SetInt32(i*8 ,0)
+                        end
+    
+                        local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA,0, index,eventDataStruct:Buffer(),eventDataSize)    -- GET_EVENT_DATA
+    
+                        if is_data_exists then
+    
+                            local targetEntity = eventDataStruct:GetInt32(0)
+                            local killerEntity = eventDataStruct:GetInt32(8)
+    
+                            local isEntityDead = IsEntityDead(targetEntity)
+    
+                            if DoesEntityExist(targetEntity) and isEntityDead and killerEntity == PlayerPedId() and FISHING_ENTITIES_LIST[targetEntity] == nil then 
+                              
+                                local killedEntityModel = GetEntityModel(targetEntity)
+    
+                                for k, _ in pairs(Config.FishData) do
+
+                                    local model = joaat(k)
+                    
+                                    if tonumber(killedEntityModel) == tonumber(model) then
+                    
+                                        FISHING_ENTITIES_LIST[targetEntity] = true 
+       
+                                        break
+                                    end
+
+                                end
+
+                            
+                            end
+    
+                        end
+    
+                    elseif event == joaat("EVENT_NETWORK_DAMAGE_ENTITY") then
+    
+                        local eventDataSize = 32  -- for EVENT_NETWORK_DAMAGE_ENTITY data size is 32
+    
+                        local eventDataStruct = DataView.ArrayBuffer(eventDataSize * 8) 
+                        for i=0,eventDataSize-1 do
+                          eventDataStruct:SetInt32(i*8 ,0)
+                        end
+    
+                        local is_data_exists = Citizen.InvokeNative(0x57EC5FA4D4D6AFCA,0, index,eventDataStruct:Buffer(),eventDataSize)	-- GET_EVENT_DATA
+    
+                        if is_data_exists then
+    
+                            local targetEntity  = eventDataStruct:GetInt32(0)
+                            local killerEntity  = eventDataStruct:GetInt32(8)
+                            local isEntityDead1 = eventDataStruct:GetInt32(8 * 3)
+    
+                            local isEntityDead2 = IsEntityDead(targetEntity)
+    
+                            if DoesEntityExist(targetEntity) and killerEntity == PlayerPedId() and FISHING_ENTITIES_LIST[targetEntity] == nil then 
+                              
+                                if isEntityDead1 and isEntityDead2 then
+
+                                    local killedEntityModel = GetEntityModel(targetEntity)
+    
+                                    for k, _ in pairs(Config.FishData) do
+
+                                        local model = joaat(k)
+                        
+                                        if tonumber(killedEntityModel) == tonumber(model) then
+                        
+                                            FISHING_ENTITIES_LIST[targetEntity] = true 
+
+                                            break
+                                        end
+
+                                    end
+                                  
+                                end
+    
+                            end
+    
+                        end
+    
+    
+                    end
+    
+    
+                end
+    
+        
+            end
+
+        end 
+
+        ::END::
+        Wait(sleep)
+  
+    end
+
+end)
+
+-- Pickup Fish and Store in Inventory fix when killing fishes somehow with horses, players can abuse and pickup the fish than actual fishing.
+Citizen.CreateThread(function()
+    while true do
+
+        local ped = PlayerPedId()
+    
+        if not IsPedCarryingSomething(ped) then
+            goto END
+        end
+
+        if IsPedCarryingSomething(ped) then 
+            local holding = GetFirstEntityPedIsCarrying(ped)
+
+            local heldModel = GetEntityModel(holding)
+
+            for k, _ in pairs(Config.FishData) do
+
+                local model = joaat(k)
+
+                if tonumber(heldModel) == tonumber(model) then
+
+                    if not FISHING_ENTITIES_LIST[holding] then 
+                        local success = RemoveCarriedFishEntityProperly(holding)
+
+                        if success then
+                            ClearPedTasksImmediately(ped, true, true)
+                        end
+
+                        if Config.Debug then 
+                            print('Removed from player hands a fish that has been killed and carried without a fishing rod - bug protection')
+                        end
+
+                        break
+
+                    end
+
+                end
+
+            end
+        end
+
+        ::END::
+        Wait(1000)
+    end
+end)
 
