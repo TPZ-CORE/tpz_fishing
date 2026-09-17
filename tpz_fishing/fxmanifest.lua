@@ -4,7 +4,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 
 author 'Nosmakos'
 description 'TPZ-CORE Fishing'
-version '1.0.0'
+version '1.0.1'
 
 shared_scripts {
 	"config.lua",
@@ -12,6 +12,7 @@ shared_scripts {
 }
 
 client_scripts {
+	'@tpz_core/client/modules/dataview/client.lua',
 	'client/*.js',
 	'client/*.lua'
 }
