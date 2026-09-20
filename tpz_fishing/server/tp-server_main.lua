@@ -140,6 +140,10 @@ Citizen.CreateThread(function()
 		TPZInv.registerUsableItem(item, GetCurrentResourceName(), function(data)
             local _source = data.source
 
+            if PlayerBaits[_source] and PlayerBaits[_source] == item then
+                return
+            end
+
             TPZInv.removeItem(_source, item, 1)
             TriggerClientEvent("tpz_fishing:client:useSelectedFishingBait", data.source, item)
 
